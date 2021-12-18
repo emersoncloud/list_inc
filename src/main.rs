@@ -24,11 +24,20 @@ async fn blocking_task() -> io::Result<Vec<u8>> {
     Ok(vec)
 }
 
+// #[get("/jacky/<input>")]
+// fn jacky(input: &RawStr) -> String {
+//     format!("{}{}", input.as_str(), "y")
+// }
+
+#[get("/jacky/<name>")]
+fn jacky(name: &str) -> String {
+    format!("{}y", name)
+}
+
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
-        .mount("/", routes![index, delay, blocking_task])
-        .mount("/hi", routes![index])
+        .mount("/", routes![index, delay, blocking_task, jacky])
 }
 
 // #[rocket::main]
