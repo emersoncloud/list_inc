@@ -56,6 +56,12 @@ async fn get(id: Id, list: Jackies<'_>) -> Option<Json<String>> {
     }
 }
 
+#[get("/all", format = "json")]
+async fn get_all(list: Jackies<'_>) -> Json<Vec<String>> {
+    let list = list.lock().await;
+    Json(list.to_vec())
+}
+
 #[get("/jacky/<name>")]
 fn jacky(name: &str) -> String {
     format!("{}y", name)
@@ -64,6 +70,6 @@ fn jacky(name: &str) -> String {
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
-        .mount("/", routes![jacky, new, get])
+        .mount("/", routes![jacky, new, get, get_all])
         .manage(MessageList::new(vec![]))
 }
