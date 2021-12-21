@@ -27,7 +27,11 @@ type Contacts<'r> = &'r State<ContactList>;
 async fn new(message: Json<Contact>, list: Contacts<'_>) -> Value {
     let mut list = list.lock().await;
     let id = list.len();
-    list.push(message.0);
+
+    let mut with_id = message.0;
+    with_id.id = Some(id);
+
+    list.push(with_id);
     json!({"status": "ok", "id": id})
 }
 
