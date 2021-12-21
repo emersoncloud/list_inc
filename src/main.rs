@@ -66,9 +66,14 @@ fn jacky(name: &str) -> String {
     format!("{}y", name)
 }
 
+#[options("/")]
+fn good_jacky() -> Value {
+    json!({"hours": "8", "rate": "150.00", "payment_owed": "1200.00"})
+}
+
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
-        .mount("/", routes![jacky, new, get, get_all, whatever])
+        .mount("/", routes![jacky, new, get, get_all, whatever, good_jacky])
         .manage(MessageList::new(vec![]))
 }
