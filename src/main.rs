@@ -1,62 +1,44 @@
 #[macro_use] extern crate rocket;
 
-use std::borrow::Cow;
-
 use rocket::State;
 use rocket::tokio::sync::Mutex;
 use rocket::{Rocket, Build};
-use rocket::tokio::time::{sleep, Duration};
-use rocket::tokio::task::spawn_blocking;
 use rocket::serde::json::{Json, Value, json};
 use rocket::serde::{Serialize, Deserialize};
-
-use std::io;
 
 type Id = usize;
 
 #[derive(Serialize, Deserialize)]
 #[derive(Clone)]
 #[serde(crate = "rocket::serde")]
-struct Jacky<'r> {
+
+struct Contact {
     id: Option<Id>,
-    name: Cow<'r, str>,
-    email: Cow<'r, str>,
-    phone: Cow<'r, str>,
-    message: Cow<'r, str>
+    name: String,
+    email: String,
+    phone: String,
+    message: String
 }
 
-type MessageList<'r> = Mutex<Vec<String>>;
-type Jackies<'r> = &'r State<MessageList<'r>>;
+type ContactList = Mutex<Vec<Contact>>;
+type Contacts<'r> = &'r State<ContactList>;
 
 #[post("/", format = "json", data = "<message>")]
-async fn new<'x>(message: Json<Jacky<'_>>, list: Jackies<'_>) -> Value {
+async fn new(message: Json<Contact>, list: Contacts<'_>) -> Value {
     let mut list = list.lock().await;
     let id = list.len();
-    list.push(message.name.to_string());
-
+    list.push(message.0);
     json!({"status": "ok", "id": id})
 }
 
-
-#[post("/", format="text")]
-fn whatever() -> Value {
-    json!({"status": "bad jack"})
-}
-
-
 #[get("/<id>", format = "json")]
-async fn get(id: Id, list: Jackies<'_>) -> Option<Json<String>> {
+async fn get(id: Id, list: Contacts<'_>) -> Value {
     let list = list.lock().await;
-    let local_jack = list.get(id);
-    if let Some(j) = local_jack {
-        Some(Json(j.into()))
-    } else {
-        None
-    }
+    json!(list.get(id))
 }
 
 #[get("/all", format = "json")]
-async fn get_all(list: Jackies<'_>) -> Json<Vec<String>> {
+async fn get_all(list: Contacts<'_>) -> Json<Vec<Contact>> {
     let list = list.lock().await;
     Json(list.to_vec())
 }
@@ -67,13 +49,13 @@ fn jacky(name: &str) -> String {
 }
 
 #[options("/")]
-fn good_jacky() -> Value {
+fn good_jack() -> Value {
     json!({"hours": "8", "rate": "150.00", "payment_owed": "1200.00"})
 }
 
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
-        .mount("/", routes![jacky, new, get, get_all, whatever, good_jacky])
-        .manage(MessageList::new(vec![]))
+        .mount("/", routes![jacky, new, get, get_all, good_jack])
+        .manage(ContactList::new(vec![]))
 }
