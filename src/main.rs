@@ -33,17 +33,16 @@ async fn new<'x>(message: Json<Jacky<'_>>, list: Jackies<'_>) -> Value {
     let mut list = list.lock().await;
     let id = list.len();
     list.push(message.name.to_string());
-    // list.push(Jacky {
-    //     id: None,
-    //     name: message.name.clone(),
-    //     email: message.email.clone(),
-    //     phone: message.phone.clone(),
-    //     message: message.message.clone(),
-    //
-    // });
 
     json!({"status": "ok", "id": id})
 }
+
+
+#[post("/", format="text")]
+fn whatever() -> Value {
+    json!({"status": "bad jack"})
+}
+
 
 #[get("/<id>", format = "json")]
 async fn get(id: Id, list: Jackies<'_>) -> Option<Json<String>> {
@@ -70,6 +69,6 @@ fn jacky(name: &str) -> String {
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
-        .mount("/", routes![jacky, new, get, get_all])
+        .mount("/", routes![jacky, new, get, get_all, whatever])
         .manage(MessageList::new(vec![]))
 }
