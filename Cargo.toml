@@ -3,11 +3,10 @@ name = "list_inc"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-#[dependencies]
-#rocket = "0.5.0-rc.1"
-
+[dependencies]
+dotenv = "0.15.0"
+openapi = { path = "../twilio-rust" }
+tokio = { version = "1.15.0", features = ["full"] }
 
 [dependencies.rocket]
 version = "0.5.0-rc.1"
