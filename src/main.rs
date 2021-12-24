@@ -83,7 +83,7 @@ async fn sendit(contact: Json<Contact>) -> Value {
 
     let from = contact.name.to_string();
     let subject = format!("New LIST Inc contact from {}", contact.name);
-    let message = format!("Name: {}<br>Email: {}<br>Message: {}", contact.name, contact.email, contact.message);
+    let message = format!("Name: {}<br>Email: {}<br>Phone: {}<br>Message: {}", contact.name, contact.email, contact.phone, contact.message);
     println!("{}", message);
 
     let mail_info = Mail::new()
