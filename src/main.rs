@@ -32,7 +32,7 @@ fn rocket() -> Rocket<Build> {
     rocket::build()
         .mount(
             "/",
-            routes![jacky, new, get, get_all, good_jack, sendit],
+            routes![jacky, new, get, get_all, good_jack, sendit, test_sendit],
         )
         .manage(ContactList::new(vec![]))
 }
@@ -83,7 +83,6 @@ async fn sendit(contact: Json<Contact>) -> Value {
 
     let from = contact.name.to_string();
     let subject = format!("New LIST Inc contact from {}", contact.name);
-    // let message = format!("<h3>Name</h3>: {}<br><h3>Email</h3>: {}<br><h3>Message</h3>: {}", contact.name, contact.email, contact.message);
     let message = format!("Name: {}<br>Email: {}<br>Message: {}", contact.name, contact.email, contact.message);
     println!("{}", message);
 
@@ -103,4 +102,9 @@ async fn sendit(contact: Json<Contact>) -> Value {
 
     println!("{:?}", response);
     json!(response.status().as_str())
+}
+
+#[post("/test_send_email", format = "json", data = "<_contacts>")]
+async fn test_sendit(_contacts: Json<Contact>) -> Value {
+    json!("200")
 }
