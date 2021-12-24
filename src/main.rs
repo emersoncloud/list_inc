@@ -1,18 +1,20 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::State;
-use rocket::tokio::sync::Mutex;
-use rocket::{Rocket, Build};
-use rocket::serde::json::{Json, Value, json};
-use rocket::serde::{Serialize, Deserialize};
 use dotenv;
-use openapi::apis::{configuration::Configuration, default_api as twilio_api};
+use rocket::serde::json::{json, Json, Value};
+use rocket::serde::{Deserialize, Serialize};
+use rocket::tokio::sync::Mutex;
+use rocket::State;
+use rocket::{Build, Rocket};
 use std::env;
+
+use sendgrid::SGClient;
+use sendgrid::{Destination, Mail};
 
 type Id = usize;
 
-#[derive(Serialize, Deserialize)]
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 #[serde(crate = "rocket::serde")]
 
 struct Contact {
@@ -20,7 +22,7 @@ struct Contact {
     name: String,
     email: String,
     phone: String,
-    message: String
+    message: String,
 }
 
 type ContactList = Mutex<Vec<Contact>>;
@@ -55,48 +57,6 @@ fn jacky(name: &str) -> String {
     format!("{}y", name)
 }
 
-#[get("/twil")]
-async fn twilio() {
-    dotenv::dotenv().expect("Failed to read .env file");
-    let account_sid = env::var("TWILIO_ACCOUNT_SID").unwrap();
-    let api_key = env::var("TWILIO_API_KEY").unwrap();
-    let api_key_sercret = env::var("TWILIO_API_KEY_SECRET").unwrap();
-    let from = env::var("TWILIO_PHONE_NUMBER").unwrap();
-    let to = env::var("TO_NUMBER").unwrap();
-
-    let mut twilio_config = Configuration::default();
-    twilio_config.basic_auth = Some((api_key, Some(api_key_sercret)));
-
-    let message = twilio_api::create_message(
-        &twilio_config,
-        &account_sid,
-        &to,
-        None,
-        None,
-        None,
-        Some("Ahoy, Rustacean! 🦀"),
-        None,
-        None,
-        Some(&from),
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-    )
-        .await;
-
-    let result = match message {
-        Ok(result) => result,
-        Err(error) => panic!("Something went wrong {:?}", error),
-    };
-    println!("{:?}", result.sid);
-}
-
 #[options("/")]
 fn good_jack() -> Value {
     json!({"hours": "8", "rate": "150.00", "payment_owed": "1200.00"})
@@ -105,6 +65,33 @@ fn good_jack() -> Value {
 #[launch]
 fn rocket() -> Rocket<Build> {
     rocket::build()
-        .mount("/", routes![jacky, new, get, get_all, good_jack, twilio])
+        .mount(
+            "/",
+            routes![jacky, new, get, get_all, good_jack, sendit],
+        )
         .manage(ContactList::new(vec![]))
+}
+
+#[post("/send_email")]
+async fn sendit() -> Value {
+    dotenv::dotenv().expect("Failed to read .env file");
+    let api_key = env::var("SENDGRID_API_KEY").unwrap();
+    let sg = SGClient::new(api_key);
+    let mut x_smtpapi = String::new();
+    x_smtpapi.push_str(r#"{"unique_args":{"test":7}}"#);
+    let mail_info = Mail::new()
+        .add_to(Destination {
+            address: "emersoncloud@gmail.com",
+            name: "you there",
+        })
+        .add_from("emerson@emersoncloud.net")
+        .add_subject("Rust is rad")
+        .add_html("<h1>Hello jack!</h1>")
+        .add_from_name("test")
+        .add_header("x-cool".to_string(), "indeed")
+        .add_x_smtpapi(&x_smtpapi);
+
+    let response = sg.send(mail_info).await.unwrap();
+
+    json!(response.status().as_str())
 }
