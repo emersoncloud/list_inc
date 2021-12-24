@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate rocket;
 
-use dotenv;
 use rocket::serde::json::{json, Json, Value};
 use rocket::serde::{Deserialize, Serialize};
 use rocket::tokio::sync::Mutex;
@@ -27,6 +26,16 @@ struct Contact {
 
 type ContactList = Mutex<Vec<Contact>>;
 type Contacts<'r> = &'r State<ContactList>;
+
+#[launch]
+fn rocket() -> Rocket<Build> {
+    rocket::build()
+        .mount(
+            "/",
+            routes![jacky, new, get, get_all, good_jack, sendit],
+        )
+        .manage(ContactList::new(vec![]))
+}
 
 #[post("/", format = "json", data = "<message>")]
 async fn new(message: Json<Contact>, list: Contacts<'_>) -> Value {
@@ -62,36 +71,36 @@ fn good_jack() -> Value {
     json!({"hours": "8", "rate": "150.00", "payment_owed": "1200.00"})
 }
 
-#[launch]
-fn rocket() -> Rocket<Build> {
-    rocket::build()
-        .mount(
-            "/",
-            routes![jacky, new, get, get_all, good_jack, sendit],
-        )
-        .manage(ContactList::new(vec![]))
-}
-
-#[post("/send_email")]
-async fn sendit() -> Value {
+#[post("/send_email", format = "json", data = "<contact>")]
+async fn sendit(contact: Json<Contact>) -> Value {
     dotenv::dotenv().expect("Failed to read .env file");
-    let api_key = env::var("SENDGRID_API_KEY").unwrap();
-    let sg = SGClient::new(api_key);
-    let mut x_smtpapi = String::new();
-    x_smtpapi.push_str(r#"{"unique_args":{"test":7}}"#);
+
+    let sg = SGClient::new(env::var("SENDGRID_API_KEY").unwrap());
+
+    let x_smtpapi = String::from(r#"{"unique_args":{"test":7}}"#);
+
+    let logan_address = env::var("TO_ADDRESS").unwrap();
+
+    let from = contact.name.to_string();
+    let subject = format!("New LIST Inc contact from {}", contact.name);
+    // let message = format!("<h3>Name</h3>: {}<br><h3>Email</h3>: {}<br><h3>Message</h3>: {}", contact.name, contact.email, contact.message);
+    let message = format!("Name: {}<br>Email: {}<br>Message: {}", contact.name, contact.email, contact.message);
+    println!("{}", message);
+
     let mail_info = Mail::new()
         .add_to(Destination {
-            address: "emersoncloud@gmail.com",
-            name: "you there",
+            address: logan_address.as_str(),
+            name: "Logan List",
         })
         .add_from("emerson@emersoncloud.net")
-        .add_subject("Rust is rad")
-        .add_html("<h1>Hello jack!</h1>")
-        .add_from_name("test")
+        .add_from_name(from.as_str())
+        .add_subject(subject.as_str())
+        .add_html(message.as_str())
         .add_header("x-cool".to_string(), "indeed")
         .add_x_smtpapi(&x_smtpapi);
 
     let response = sg.send(mail_info).await.unwrap();
 
+    println!("{:?}", response);
     json!(response.status().as_str())
 }
